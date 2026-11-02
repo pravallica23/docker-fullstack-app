@@ -1,0 +1,38 @@
+﻿services:
+  backend:
+    build:
+      context: ./backend
+    container_name: fullstack-backend
+    restart: unless-stopped
+    expose:
+      - "5000"
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: fullstack-frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: fullstack-nginx
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,33 @@
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 40px 20px;
+}
+
+main {
+  max-width: 750px;
+  margin: 30px auto;
+  padding: 30px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  color: #2563eb;
+  text-align: center;
+}
+
+h2 {
+  color: #1e293b;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 8px;
+  margin-top: 28px;
+}
+
+p {
+  color: #334155;
+  font-size: 16px;
+}
