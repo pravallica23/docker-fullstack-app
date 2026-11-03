@@ -1,19 +1,30 @@
-
 name: Docker Full Stack CI Pipeline
 
 on:
   push:
-    branches:
-      - main
-
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  test-and-build:
-    runs-on: ubuntu-latest
 
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Check Docker version
+        run: docker --version
+
+      - name: Check Docker Compose
+        run: docker compose version
+
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    needs: prepare
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -31,16 +42,77 @@ jobs:
         working-directory: ./backend
         run: npm test
 
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Install frontend dependencies
         working-directory: ./frontend
         run: npm ci
 
-      - name: Build React frontend
+      - name: Build React application
         working-directory: ./frontend
         run: npm run build
 
-      - name: Validate Docker Compose
+  compose-validation:
+    name: Docker Compose Validation
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose configuration
         run: docker compose config
+
+  docker-integration:
+    name: Docker Build and Integration Test
+    runs-on: ubuntu-latest
+    needs:
+      - backend-tests
+      - frontend-build
+      - compose-validation
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
 
       - name: Build Docker images
         run: docker compose build
+
+      - name: Start application containers
+        run: docker compose up -d
+
+      - name: Wait for application and test endpoints
+        run: |
+          for i in {1..20}; do
+            if curl -fsS http://localhost:8081/api/health; then
+              break
+            fi
+            echo "Waiting for backend..."
+            sleep 3
+          done
+
+          curl -f http://localhost:8081/api/health
+          curl -f http://localhost:8081/api/info
+          curl -f http://localhost:8081/
+
+      - name: Check running containers
+        run: docker compose ps
+
+      - name: Show logs if integration test fails
+        if: failure()
+        run: docker compose logs
+
+      - name: Cleanup containers
+        if: always()
+        run: docker compose down
